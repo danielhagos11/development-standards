@@ -43,18 +43,12 @@ jobs:
         with:
           node-version: 22
 
-      
-      - name: Checkout BL development standards
+      - name: Run BL development standards
         if: steps.detect.outputs.is_dotnet == 'true'
-        uses: actions/checkout@v4
+        uses: YOUR-ORG/bl-development-standards/.github/actions/validate@v1
         with:
-          repository: danielhagos11/development-standards
-          ref: v1
-          path: bl-development-standards
+          validation-mode: ${{ inputs.validation-mode }}
 
-      - name: Run BL development standards validator
-        if: steps.detect.outputs.is_dotnet == 'true'
-        env:
-          VALIDATION_MODE: ${{ inputs.validation-mode }}
-        run: node development-standards/scripts/validate-standards.js
-
+      - name: Skip non-.NET repository
+        if: steps.detect.outputs.is_dotnet != 'true'
+        run: echo "Skipping validation because this is not a .NET repository."
