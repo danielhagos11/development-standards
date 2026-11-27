@@ -3,24 +3,9 @@ const fs = require("fs");
 const { execFileSync } = require("child_process");
 
 const ALLOWED_TYPES = [
-  "fix",
-  "init",
-  "feat",
-  "style",
-  "test",
-  "build",
-  "perf",
-  "security",
-  "design",
-  "config",
-  "merge",
-  "release",
-  "dependency",
-  "revert",
-  "cleanup",
-  "ci",
-  "docs",
-  "chore"
+  "fix", "init", "feat", "style", "test", "build", "perf",
+  "security", "design", "config", "merge", "release",
+  "dependency", "revert", "cleanup", "ci", "docs", "chore"
 ];
 
 const VALIDATION_MODE = (
@@ -42,8 +27,8 @@ const REQUIRED_PR_HEADINGS = [
   "Related Azure Boards Work Item"
 ];
 
-let hasErrors = false;
 let issueCount = 0;
+let hasErrors = false;
 
 function reportIssue(message) {
   issueCount++;
@@ -73,48 +58,41 @@ function getPullRequestEvent() {
 }
 
 function getPullRequestCommits(baseSha, headSha) {
-  try {
-    const output = execFileSync(
-      "git",
-      [
-        "log",
-        "--no-merges",
-        "--format=%H%x1f%s%x1f%b%x1e",
-        `${baseSha}..${headSha}`
-      ],
-      { encoding: "utf8" }
-    );
+  const output = execFileSync(
+    "git",
+    [
+      "log",
+      "--no-merges",
+      "--format=%H%x1f%s%x1f%b%x1e",
+      `${baseSha}..${headSha}`
+    ],
+    { encoding: "utf8" }
+  );
 
-    return output
-      .split("\x1e")
-      .map(record => record.trim())
-      .filter(Boolean)
-      .map(record => {
-        const [hash, subject, body = ""] = record.split("\x1f");
+  return output
+    .split("\x1e")
+    .map(record => record.trim())
+    .filter(Boolean)
+    .map(record => {
+      const [hash, subject, body = ""] = record.split("\x1f");
 
-        return {
-          hash,
-          subject: subject || "",
-          body: body || ""
-        };
-      });
-  } catch (error) {
-    throw new Error(
-      `Unable to retrieve pull request commits: ${error.message}`
-    );
-  }
+      return {
+        hash,
+        subject: subject || "",
+        body: body || ""
+      };
+    });
 }
 
 function validateCommit(commit) {
   const shortHash = commit.hash.substring(0, 7);
   const subject = commit.subject.trim();
-
   const match = subject.match(COMMIT_REGEX);
 
   if (!match) {
     reportIssue(
       `Commit ${shortHash} has an invalid message: "${subject}". ` +
-      "Expected format: type(optional-scope)!: AB#1234 description"
+      "Expected: type(optional-scope)!: AB#1234 description"
     );
     return;
   }
@@ -134,9 +112,12 @@ function validateCommit(commit) {
     );
   }
 
-  if (breakingChange && !/^BREAKING CHANGE:\s*.+/im.test(commit.body)) {
+  if (
+    breakingChange &&
+    !/^BREAKING CHANGE:\s*.+/im.test(commit.body)
+  ) {
     reportIssue(
-      `Commit ${shortHash} uses "!" but does not include a ` +
+      `Commit ${shortHash} uses "!" but is missing a ` +
       "BREAKING CHANGE footer in its commit body."
     );
   }
@@ -163,20 +144,11 @@ function validatePullRequest(pullRequest) {
 
   if (!title) {
     reportIssue("Pull request title is required.");
-  } else {
-    if (title.length > 50) {
-      reportIssue(
-        `Pull request title is ${title.length} characters. ` +
-        "The maximum allowed length is 50 characters."
-      );
-    }
-
-    if (!/\bAB#\d+\b/.test(title)) {
-      reportIssue(
-        "Pull request title should include an Azure Boards reference, " +
-        "for example AB#1234."
-      );
-    }
+  } else if (title.length > 50) {
+    reportIssue(
+      `Pull request title is ${title.length} characters. ` +
+      "The maximum allowed length is 50 characters."
+    );
   }
 
   if (!body.trim()) {
@@ -187,14 +159,14 @@ function validatePullRequest(pullRequest) {
   for (const heading of REQUIRED_PR_HEADINGS) {
     if (!hasHeading(body, heading)) {
       reportIssue(
-        `Pull request description is missing the required section: "${heading}".`
+        `Pull request description is missing: "${heading}".`
       );
     }
   }
 
   if (!/\bAB#\d+\b/.test(body)) {
     reportIssue(
-      "Pull request description must include an Azure Boards work item reference, " +
+      "Pull request description must include an Azure Boards reference, " +
       "for example AB#1234."
     );
   }
@@ -203,7 +175,7 @@ function validatePullRequest(pullRequest) {
 function main() {
   if (!["warn", "enforce"].includes(VALIDATION_MODE)) {
     throw new Error(
-      `Invalid VALIDATION_MODE "${VALIDATION_MODE}". Use "warn" or "enforce".`
+      `Invalid VALIDATION_MODE "${VALIDATION_MODE}". Use warn or enforce.`
     );
   }
 
@@ -211,16 +183,12 @@ function main() {
 
   const pullRequest = getPullRequestEvent();
 
-  const baseSha = pullRequest.base.sha;
-  const headSha = pullRequest.head.sha;
-
-  const commits = getPullRequestCommits(baseSha, headSha);
+  const commits = getPullRequestCommits(
+    pullRequest.base.sha,
+    pullRequest.head.sha
+  );
 
   console.log(`Found ${commits.length} commit(s) to validate.`);
-
-  if (commits.length === 0) {
-    console.warn("No non-merge commits were found to validate.");
-  }
 
   for (const commit of commits) {
     validateCommit(commit);
@@ -239,16 +207,12 @@ function main() {
   console.log(`Found ${issueCount} issue(s).`);
 
   if (VALIDATION_MODE === "warn") {
-    console.log(
-      "Warning mode is enabled. These issues will not fail the workflow."
-    );
+    console.log("Warning mode is enabled. The workflow will not fail.");
     return;
   }
 
   if (hasErrors) {
-    console.error(
-      "Enforcement mode is enabled. The workflow will fail."
-    );
+    console.error("Enforcement mode is enabled. The workflow will fail.");
     process.exitCode = 1;
   }
 }
@@ -256,6 +220,8 @@ function main() {
 try {
   main();
 } catch (error) {
-  console.error(`::error::Validation could not complete: ${error.message}`);
+  console.error(
+    `::error::Validation could not complete: ${error.message}`
+  );
   process.exitCode = 1;
 }
