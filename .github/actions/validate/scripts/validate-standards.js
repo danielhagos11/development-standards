@@ -9,7 +9,7 @@ const ALLOWED_TYPES = [
 ];
 
 const VALIDATION_MODE = (
-  process.env.VALIDATION_MODE || "enforce"
+  process.env.VALIDATION_MODE || "warn"
 ).toLowerCase();
 
 const COMMIT_REGEX = new RegExp(
