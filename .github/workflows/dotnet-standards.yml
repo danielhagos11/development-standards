@@ -41,7 +41,7 @@ jobs:
         if: steps.detect.outputs.is_dotnet == 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
 
       - name: Run BL development standards
         if: steps.detect.outputs.is_dotnet == 'true'
