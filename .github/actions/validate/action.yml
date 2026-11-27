@@ -1,0 +1,18 @@
+
+name: BL Development Standards Validator
+description: Validates BL commit messages and pull request standards.
+
+inputs:
+  validation-mode:
+    description: "Validation mode: warn or enforce"
+    required: false
+    default: warn
+
+runs:
+  using: composite
+  steps:
+    - name: Run validator
+      shell: bash
+      env:
+        VALIDATION_MODE: ${{ inputs.validation-mode }}
+      run: node "$GITHUB_ACTION_PATH/scripts/validate-standards.js"
