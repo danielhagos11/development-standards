@@ -45,7 +45,7 @@ jobs:
 
       - name: Run BL development standards
         if: steps.detect.outputs.is_dotnet == 'true'
-        uses: danielhagos11/development-standards/.github/actions/validate@v1.0.1
+        uses: danielhagos11/development-standards/.github/actions/validate@main
         with:
           validation-mode: ${{ inputs.validation-mode }}
 
